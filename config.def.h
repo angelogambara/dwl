@@ -4,13 +4,14 @@
                         ((hex >> 8) & 0xFF) / 255.0f, \
                         (hex & 0xFF) / 255.0f }
 /* appearance */
-static const int sloppyfocus               = 1;  /* focus follows mouse */
+static const int sloppyfocus               = 0;  /* focus follows mouse */
 static const int bypass_surface_visibility = 0;  /* 1 means idle inhibitors will disable idle tracking even if it's surface isn't visible  */
-static const unsigned int borderpx         = 1;  /* border pixel of windows */
-static const float rootcolor[]             = COLOR(0x222222ff);
-static const float bordercolor[]           = COLOR(0x444444ff);
-static const float focuscolor[]            = COLOR(0x005577ff);
-static const float urgentcolor[]           = COLOR(0xff0000ff);
+static const int smartborders              = 1;
+static const unsigned int borderpx         = 5;  /* border pixel of windows */
+static const float rootcolor[]             = COLOR(0x1d2021ff);
+static const float bordercolor[]           = COLOR(0x928374ff);
+static const float focuscolor[]            = COLOR(0xd79921ff);
+static const float urgentcolor[]           = COLOR(0xcc241dff);
 /* This conforms to the xdg-protocol. Set the alpha to zero to restore the old behavior */
 static const float fullscreen_bg[]         = {0.0f, 0.0f, 0.0f, 1.0f}; /* You can also use glsl colors */
 
@@ -19,6 +20,13 @@ static const float fullscreen_bg[]         = {0.0f, 0.0f, 0.0f, 1.0f}; /* You ca
 
 /* logging */
 static int log_level = WLR_ERROR;
+
+/* autostart */
+static const char *const autostart[] = {
+	"sh", "-c", "~/.config/dwl/autostart-parts.sh", NULL,
+	NULL /* terminate */
+};
+
 
 static const Rule rules[] = {
 	/* app_id             title       tags mask     isfloating   monitor */
@@ -35,15 +43,30 @@ static const Layout layouts[] = {
 	{ "[M]",      monocle },
 };
 
+/*
+static struct wlr_output_image_description generic_bt2020_pq = {
+	.primaries = WLR_COLOR_NAMED_PRIMARIES_BT2020,
+	.transfer_function = WLR_COLOR_TRANSFER_FUNCTION_ST2084_PQ,
+	.max_cll  = 10000,
+	.max_fall = 400,
+	.mastering_luminance = {
+		.min = 0,
+		.max = 10000,
+	},
+};
+*/
+
 /* monitors */
 /* (x=-1, y=-1) is reserved as an "autoconfigure" monitor position indicator
  * WARNING: negative values other than (-1, -1) cause problems with Xwayland clients due to
  * https://gitlab.freedesktop.org/xorg/xserver/-/issues/899 */
 static const MonitorRule monrules[] = {
-   /* name        mfact  nmaster scale layout       rotate/reflect                x    y
-    * example of a HiDPI laptop monitor:
-    { "eDP-1",    0.5f,  1,      2,    &layouts[0], WL_OUTPUT_TRANSFORM_NORMAL,   -1,  -1 }, */
-	{ NULL,       0.55f, 1,      1,    &layouts[0], WL_OUTPUT_TRANSFORM_NORMAL,   -1,  -1 },
+	/* name        mfact  nmaster scale layout       rotate/reflect                 x    y          image_desc  pixel_format
+	* example of a HiDPI laptop monitor:
+	{ "eDP-1",    0.5f,  1,      2,    &layouts[0], WL_OUTPUT_TRANSFORM_NORMAL,   -1,  -1,               NULL, DRM_FORMAT_XRGB8888 },
+	* HDR Example
+	{ NULL,       0.5f,  1,      1,    &layouts[0], WL_OUTPUT_TRANSFORM_NORMAL,   -1,  -1, &generic_bt2020_pq, DRM_FORMAT_XRGB2101010 }, */
+	{ NULL,       0.55f, 1,      1,    &layouts[0], WL_OUTPUT_TRANSFORM_NORMAL,   -1,  -1,               NULL, DRM_FORMAT_XRGB8888 },
 	/* default monitor rule: can be changed but cannot be eliminated; at least one monitor rule must exist */
 };
 
@@ -56,8 +79,8 @@ static const struct xkb_rule_names xkb_rules = {
 	.options = NULL,
 };
 
-static const int repeat_rate = 25;
-static const int repeat_delay = 600;
+static const int repeat_rate = 40;
+static const int repeat_delay = 200;
 
 /* Trackpad */
 static const int tap_to_click = 1;
@@ -102,8 +125,10 @@ LIBINPUT_CONFIG_TAP_MAP_LMR -- 1/2/3 finger tap maps to left/middle/right
 */
 static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TAP_MAP_LRM;
 
+static const int cursor_timeout = 5;
+
 /* If you want to use the windows key for MODKEY, use WLR_MODIFIER_LOGO */
-#define MODKEY WLR_MODIFIER_ALT
+#define MODKEY WLR_MODIFIER_LOGO
 
 #define TAGKEYS(KEY,SKEY,TAG) \
 	{ MODKEY,                    KEY,            view,            {.ui = 1 << TAG} }, \
@@ -115,29 +140,80 @@ static const enum libinput_config_tap_button_map button_map = LIBINPUT_CONFIG_TA
 #define SHCMD(cmd) { .v = (const char*[]){ "/bin/sh", "-c", cmd, NULL } }
 
 /* commands */
-static const char *termcmd[] = { "foot", NULL };
-static const char *menucmd[] = { "wmenu-run", NULL };
+static const char *termcmd[] = { "alacritty", NULL };
+static const char *menucmd[] = {
+	"bemenu-run",
+	"-m",  "-2",
+	"-l",  "10"
+	"--fn", "Hack 20",
+	"--tb", "#d79921",
+	"--tf", "#1d2021",
+	"--hb", "#d79921",
+	"--hf", "#1d2021",
+	NULL
+};
 
+static const char *browsercmd[]         = { "firefox",  NULL };
+static const char *filemancmd[]         = { "thunar",   NULL };
+static const char *grimcmd[]            = { "sh", "-c", "geometry=$(slurp) && grim -g \"$geometry\" - | swappy -f -",       NULL };
+static const char *kritacmd[]           = { "krita",    NULL };
+static const char *notifexeccmd[]       = { "dunstctl", "action",       NULL };
+static const char *notifkillcmd[]       = { "dunstctl", "close-all",    NULL };
+static const char *prismlaunchercmd[]   = { "prismlauncher",            NULL };
+static const char *steamcmd[]           = { "steam",        NULL };
+static const char *suspendcmd[]         = { "zzz",  NULL };
+static const char *sxivcmd[]            = { "sh", "-c", "sxiv -ro ~/gallery-dl",    NULL };
+static const char *termcmd[]            = { "st",   NULL };
+static const char *virtmancmd[]         = { "virt-manager", NULL };
+
+static const char *volmutecmd[]         = { "sh", "-c", "wpctl set-mute @DEFAULT_SINK@ toggle; pkill -RTMIN+4 dwmblocks",   NULL };
+static const char *voldowncmd[]         = { "sh", "-c", "wpctl set-volume --limit=1.0 @DEFAULT_SINK@ 5%-; pkill -RTMIN+4 dwmblocks",    NULL };
+static const char *volupcmd[]           = { "sh", "-c", "wpctl set-volume --limit=1.0 @DEFAULT_SINK@ 5%+; pkill -RTMIN+4 dwmblocks",    NULL };
+static const char *micmutecmd[]         = { "sh", "-c", "wpctl set-mute @DEFAULT_SOURCE@ toggle; pkill -RTMIN+4 dwmblocks", NULL };
+
+static const char *brightdowncmd[]      = { "sh", "-c", "brightnessctl set 5%-; pkill -RTMIN+5 dwmblocks",  NULL };
+static const char *brightupcmd[]        = { "sh", "-c", "brightnessctl set 5%+; pkill -RTMIN+5 dwmblocks",  NULL };
+
+#include "shiftview.c"
+
+#include <xkbcommon/xkbcommon.h>
 static const Key keys[] = {
 	/* Note that Shift changes certain key codes: 2 -> at, etc. */
 	/* modifier                  key                  function          argument */
-	{ MODKEY,                    XKB_KEY_p,           spawn,            {.v = menucmd} },
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Return,      spawn,            {.v = termcmd} },
+	{ MODKEY,                    XKB_KEY_Return,      spawn,            {.v = termcmd} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Return,      spawn,            {.v = menucmd} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Return,      spawn,            {.v = dmenucmd } },
+	{ MODKEY,                       XKB_KEY_Return,   spawn,            {.v = termcmd } },
+	{ MODKEY,                       XKB_KEY_s,        spawn,            {.v = sxivcmd } },
+	{ MODKEY,                       XKB_KEY_b,        spawn,            {.v = browsercmd } },
+	{ MODKEY,                       XKB_KEY_e,        spawn,            {.v = filemancmd } },
+	{ MODKEY,                       XKB_KEY_v,        spawn,            {.v = virtmancmd } },
+	{ MODKEY,                       XKB_KEY_p,        spawn,            {.v = prismlaunchercmd } },
+	{ MODKEY|WLR_MODIFIER_CTRL,     XKB_KEY_s,        spawn,            {.v = steamcmd } },
+	{ MODKEY|WLR_MODIFIER_CTRL,     XKB_KEY_k,        spawn,            {.v = kritacmd } },
+	{ MODKEY,                       XKB_KEY_n,        spawn,            {.v = notifexeccmd } },
+	{ MODKEY|WLR_MODIFIER_SHIFT,    XKB_KEY_n,        spawn,            {.v = notifkillcmd } },
+	{ MODKEY,                       XKB_KEY_Print,    spawn,            {.v = grimcmd } },
+	{ MODKEY|WLR_MODIFIER_CTRL|WLR_MODIFIER_SHIFT,  XKB_KEY_s,  spawn,  {.v = suspendcmd } },
 	{ MODKEY,                    XKB_KEY_j,           focusstack,       {.i = +1} },
 	{ MODKEY,                    XKB_KEY_k,           focusstack,       {.i = -1} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_j,           movestack,        {.i = +1} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_k,           movestack,        {.i = -1} },
 	{ MODKEY,                    XKB_KEY_i,           incnmaster,       {.i = +1} },
 	{ MODKEY,                    XKB_KEY_d,           incnmaster,       {.i = -1} },
 	{ MODKEY,                    XKB_KEY_h,           setmfact,         {.f = -0.05f} },
 	{ MODKEY,                    XKB_KEY_l,           setmfact,         {.f = +0.05f} },
-	{ MODKEY,                    XKB_KEY_Return,      zoom,             {0} },
-	{ MODKEY,                    XKB_KEY_Tab,         view,             {0} },
+	{ MODKEY|WLR_MODIFIER_CTRL,                    XKB_KEY_Return, zoom, {0} },
+	{ MODKEY|WLR_MODIFIER_CTRL|WLR_MODIFIER_SHIFT, XKB_KEY_Return, view, {0} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_ISO_Left_Tab, shiftview,        {.i = -1 } },
+	{ MODKEY,                    XKB_KEY_Tab,          shiftview,        {.i = +1 } },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_c,           killclient,       {0} },
 	{ MODKEY,                    XKB_KEY_t,           setlayout,        {.v = &layouts[0]} },
 	{ MODKEY,                    XKB_KEY_f,           setlayout,        {.v = &layouts[1]} },
 	{ MODKEY,                    XKB_KEY_m,           setlayout,        {.v = &layouts[2]} },
 	{ MODKEY,                    XKB_KEY_space,       setlayout,        {0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_space,       togglefloating,   {0} },
-	{ MODKEY,                    XKB_KEY_e,           togglefullscreen, {0} },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_f,           togglefullscreen, {0} },
 	{ MODKEY,                    XKB_KEY_0,           view,             {.ui = ~0} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_parenright,  tag,              {.ui = ~0} },
 	{ MODKEY,                    XKB_KEY_comma,       focusmon,         {.i = WLR_DIRECTION_LEFT} },
@@ -154,6 +230,12 @@ static const Key keys[] = {
 	TAGKEYS(          XKB_KEY_8, XKB_KEY_asterisk,                      7),
 	TAGKEYS(          XKB_KEY_9, XKB_KEY_parenleft,                     8),
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_q,           quit,             {0} },
+	{ 0, XKB_KEY_XF86AudioMute,                       spawn,            {.v = volmutecmd } },
+	{ 0, XKB_KEY_XF86AudioLowerVolume,                spawn,            {.v = voldowncmd } },
+	{ 0, XKB_KEY_XF86AudioRaiseVolume,                spawn,            {.v = volupcmd } },
+	{ 0, XKB_KEY_XF86AudioMicMute,                    spawn,            {.v = micmutecmd } },
+	{ 0, XKB_KEY_XF86MonBrightnessDown,               spawn,            {.v = brightdowncmd } },
+	{ 0, XKB_KEY_XF86MonBrightnessUp,                 spawn,            {.v = brightupcmd } },
 
 	/* Ctrl-Alt-Backspace and Ctrl-Alt-Fx used to be handled by X server */
 	{ WLR_MODIFIER_CTRL|WLR_MODIFIER_ALT,XKB_KEY_Terminate_Server, quit, {0} },
