@@ -30,8 +30,9 @@ static const char *const autostart[] = {
 
 static const Rule rules[] = {
 	/* app_id             title       tags mask     isfloating   monitor */
-	{ "Gimp_EXAMPLE",     NULL,       0,            1,           -1 }, /* Start on currently visible tags floating, not tiled */
-	{ "firefox_EXAMPLE",  NULL,       1 << 8,       0,           -1 }, /* Start on ONLY tag "9" */
+	{ "Thunar",           "Rename",   0,            1,           -1 },
+	{ "Xarchiver",        NULL,       0,            1,           -1 },
+	{ "mpv",              NULL,       0,            1,           -1 },
     /* default/example rule: can be changed but cannot be eliminated; at least one rule must exist */
 };
 
@@ -163,8 +164,8 @@ static const char *prismlaunchercmd[]   = { "prismlauncher",            NULL };
 static const char *steamcmd[]           = { "steam",        NULL };
 static const char *suspendcmd[]         = { "zzz",  NULL };
 static const char *sxivcmd[]            = { "sh", "-c", "sxiv -ro ~/gallery-dl",    NULL };
-static const char *termcmd[]            = { "st",   NULL };
 static const char *virtmancmd[]         = { "virt-manager", NULL };
+static const char *waybarcmd[]          = { "sh", "-c", "killall waybar; setsid -f waybar",     NULL };
 
 static const char *volmutecmd[]         = { "sh", "-c", "wpctl set-mute @DEFAULT_SINK@ toggle; pkill -RTMIN+4 dwmblocks",   NULL };
 static const char *voldowncmd[]         = { "sh", "-c", "wpctl set-volume --limit=1.0 @DEFAULT_SINK@ 5%-; pkill -RTMIN+4 dwmblocks",    NULL };
@@ -182,18 +183,17 @@ static const Key keys[] = {
 	/* modifier                  key                  function          argument */
 	{ MODKEY,                    XKB_KEY_Return,      spawn,            {.v = termcmd} },
 	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Return,      spawn,            {.v = menucmd} },
-	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_Return,      spawn,            {.v = dmenucmd } },
-	{ MODKEY,                       XKB_KEY_Return,   spawn,            {.v = termcmd } },
-	{ MODKEY,                       XKB_KEY_s,        spawn,            {.v = sxivcmd } },
-	{ MODKEY,                       XKB_KEY_b,        spawn,            {.v = browsercmd } },
-	{ MODKEY,                       XKB_KEY_e,        spawn,            {.v = filemancmd } },
-	{ MODKEY,                       XKB_KEY_v,        spawn,            {.v = virtmancmd } },
-	{ MODKEY,                       XKB_KEY_p,        spawn,            {.v = prismlaunchercmd } },
-	{ MODKEY|WLR_MODIFIER_CTRL,     XKB_KEY_s,        spawn,            {.v = steamcmd } },
-	{ MODKEY|WLR_MODIFIER_CTRL,     XKB_KEY_k,        spawn,            {.v = kritacmd } },
-	{ MODKEY,                       XKB_KEY_n,        spawn,            {.v = notifexeccmd } },
-	{ MODKEY|WLR_MODIFIER_SHIFT,    XKB_KEY_n,        spawn,            {.v = notifkillcmd } },
-	{ MODKEY,                       XKB_KEY_Print,    spawn,            {.v = grimcmd } },
+	{ MODKEY,                    XKB_KEY_s,           spawn,            {.v = sxivcmd } },
+	{ MODKEY,                    XKB_KEY_b,           spawn,            {.v = browsercmd } },
+	{ MODKEY,                    XKB_KEY_e,           spawn,            {.v = filemancmd } },
+	{ MODKEY,                    XKB_KEY_v,           spawn,            {.v = virtmancmd } },
+	{ MODKEY|WLR_MODIFIER_CTRL,  XKB_KEY_w,           spawn,            {.v = waybarcmd } },
+	{ MODKEY,                    XKB_KEY_p,           spawn,            {.v = prismlaunchercmd } },
+	{ MODKEY|WLR_MODIFIER_CTRL,  XKB_KEY_s,           spawn,            {.v = steamcmd } },
+	{ MODKEY|WLR_MODIFIER_CTRL,  XKB_KEY_k,           spawn,            {.v = kritacmd } },
+	{ MODKEY,                    XKB_KEY_n,           spawn,            {.v = notifexeccmd } },
+	{ MODKEY|WLR_MODIFIER_SHIFT, XKB_KEY_n,           spawn,            {.v = notifkillcmd } },
+	{ MODKEY,                    XKB_KEY_Print,       spawn,            {.v = grimcmd } },
 	{ MODKEY|WLR_MODIFIER_CTRL|WLR_MODIFIER_SHIFT,  XKB_KEY_s,  spawn,  {.v = suspendcmd } },
 	{ MODKEY,                    XKB_KEY_j,           focusstack,       {.i = +1} },
 	{ MODKEY,                    XKB_KEY_k,           focusstack,       {.i = -1} },
