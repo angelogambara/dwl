@@ -146,7 +146,7 @@ static const char *menucmd[] = {
 	"bemenu-run",
 	"-m",  "-2",
 	"-l",  "10"
-	"--fn", "Hack 14",
+	"--fn", "Hack", "14",
 	"--tb", "#d79921",
 	"--tf", "#1d2021",
 	"--hb", "#d79921",
